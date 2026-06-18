@@ -1,0 +1,26 @@
+# Visual Studio cache
+.vs/
+*.user
+*.suo
+
+
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+
+*.vscode/
+
+# temp file
+*.tmp
+*.temp
+*.dbmdl
+*.jfm
+
+# Ignore the main appsettings file (caution: holds non-secrets too)
+appsettings.json
+
+# Recommended: Only ignore development, local, or production specific configs
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Local.json
