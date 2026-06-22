@@ -247,7 +247,6 @@ namespace WebApiProject.Migrations
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("client_name")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
