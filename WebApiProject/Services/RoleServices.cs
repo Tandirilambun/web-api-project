@@ -47,6 +47,19 @@ namespace WebApiProject.Services
             }
         }
 
+        public async Task<List<string>> GetUserRoles(User user)
+        {
+            try
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                return roles.ToList();
+            }
+            catch (System.Exception)
+            {
+                throw new Exception("Error retrieving user roles.");
+            }
+        }
+
         public async Task<bool> SignUserToRole(User user, string role)
         {
             try
@@ -56,7 +69,7 @@ namespace WebApiProject.Services
             }
             catch (System.Exception)
             {
-                throw;
+                throw new Exception("Error signing user to role.");
             }
         }
     }

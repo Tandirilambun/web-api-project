@@ -7,6 +7,8 @@ namespace WebApiProject.Interfaces
         // Define your token-related methods here (e.g., GenerateToken, ValidateToken)
         string GenerateAccessToken(User user, IList<string> roles);
         string JwtKeyGenerate();
+        Task RevokeTokenAsync(string jti, DateTime expiry);
+        Task<bool> IsTokenRevokedAsync(string jti);
         // Task<bool> ValidateTokenAsync(string token);
     }
 }

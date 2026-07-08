@@ -5,28 +5,33 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using WebApiProject.Interfaces;
 using WebApiProject.Models;
+using WebApiProject.Exceptions;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace WebApiProject.Services
 {
     public class TokenServices : ITokenServices
     {
         private readonly IConfiguration _configuration;
-        public TokenServices(IConfiguration configuration)
+        private readonly IMemoryCache _cache;
+        public TokenServices(IConfiguration configuration, IMemoryCache cache)
         {
             _configuration = configuration;
+            _cache = cache;
         }
         public string GenerateAccessToken(User user, IList<string> roles)
         {
+
             var claims = new List<Claim>
             {
                 new(JwtRegisteredClaimNames.Sub, user.Id),
                 new(JwtRegisteredClaimNames.Email, user.Email!),
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new(ClaimTypes.Name, user.UserName!),
+                new(JwtRegisteredClaimNames.Name, user.UserName!),
                 new("token_type", "user")
             };
 
-            claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+            claims.AddRange(roles.Select(role => new Claim("role", role)));
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -46,8 +51,22 @@ namespace WebApiProject.Services
 
         public string JwtKeyGenerate()
         {
-            var key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)); 
+            var key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
             return key;
+        }
+
+        public Task RevokeTokenAsync(string jti, DateTime expiry)
+        {
+            var ttl = expiry - DateTime.UtcNow;
+            if( ttl > TimeSpan.Zero)
+                _cache.Set($"blacklist:{jti}", true, ttl);
+            
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> IsTokenRevokedAsync(string jti)
+        {
+            return Task.FromResult(_cache.TryGetValue($"blacklist:{jti}", out _));
         }
     }
 }

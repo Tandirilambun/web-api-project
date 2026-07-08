@@ -8,5 +8,6 @@ namespace WebApiProject.Interfaces
     {
         Task<List<IdentityRole>> GenerateAllRoles();
         Task<bool> SignUserToRole(User user, string role);
+        Task<List<string>> GetUserRoles(User user);
     }
 }

@@ -11,7 +11,6 @@ namespace WebApiProject.Extensions
             services.AddScoped<IUserServices, UserServices>();
             services.AddScoped<IRoleServices, RoleServices>();
             services.AddScoped<ITokenServices, TokenServices>();
-            services.AddScoped<IUtilServices, UtilServices>();
             
             return services;
         }

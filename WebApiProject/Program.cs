@@ -1,18 +1,21 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using WebApiProject.Data;
+using WebApiProject.Exceptions;
 using WebApiProject.Extensions;
+using WebApiProject.Interfaces;
 using WebApiProject.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-
 var connection = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found");
 
+// DB Context Configuration
 builder.Services.AddDbContext<WebApiDbContext>(options =>
     options.UseMySql(
         connection,
@@ -20,6 +23,7 @@ builder.Services.AddDbContext<WebApiDbContext>(options =>
     )
 );
 
+// User Identity Configuration
 builder.Services.AddIdentity<User, IdentityRole>(options =>
     {
         options.Password.RequireDigit = true;
@@ -35,6 +39,7 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
     .AddEntityFrameworkStores<WebApiDbContext>()
     .AddDefaultTokenProviders();
 
+// Cookie settings to prevent redirecting to login page for API requests
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Events.OnRedirectToLogin = context =>
@@ -49,14 +54,18 @@ builder.Services.ConfigureApplicationCookie(options =>
     };
 });
 
-var jwtKey = builder.Configuration["Jwt:Key"]!;
+//JWT Authentication Configuration
 
+// Clear default claims mapping
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear(); 
+var jwtKey = builder.Configuration["Jwt:Key"]!;
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = "JwtBearer";
         options.DefaultChallengeScheme = "JwtBearer";
     })
     .AddJwtBearer("JwtBearer", options => {
+        options.MapInboundClaims = false; // Prevents automatic mapping of claims
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -66,23 +75,54 @@ builder.Services.AddAuthentication(options =>
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-            ClockSkew = TimeSpan.Zero
+            ClockSkew = TimeSpan.Zero,
+            NameClaimType = JwtRegisteredClaimNames.Name,
+            RoleClaimType = "role" // Use the custom "role" claim type
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var jti = context.Principal?.FindFirst(JwtRegisteredClaimNames.Jti);
+                if(jti == null)
+                {
+                    context.Fail("Token tidak valid");
+                    return;
+                }
+
+                var blacklist = context.HttpContext.RequestServices.GetRequiredService<ITokenServices>();
+                if(await blacklist.IsTokenRevokedAsync(jti.Value))
+                {
+                    context.Fail("Token telah dicabut");
+                }
+            }
         };
 });
 
+builder.Services.AddMemoryCache();
 builder.Services.AddAuthorization();
 builder.Services.AddApplicationServices(); 
 builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-// if (app.Environment.IsDevelopment())
-// {
-//     app.MapOpenApi();
-// }
+//Exception Handling
+app.UseExceptionHandler( errorApp =>
+    errorApp.Run(async context =>
+    {
+        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
 
-// app.UseHttpsRedirection();
+        var (status, message) = exception switch
+        {
+            AppExceptions ex => (ex.StatusCode, ex.Message),
+            _ => (500, "Internal Server Error")
+        };
+
+        context.Response.StatusCode = status;
+        await context.Response.WriteAsJsonAsync(new { message = message });
+    })
+);
 
 app.UseAuthentication();
 app.UseAuthorization();
