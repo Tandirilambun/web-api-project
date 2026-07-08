@@ -23,15 +23,12 @@ namespace WebApiProject.Controller
         [HttpGet("user-info")]
         public async Task<IActionResult> GetUserInfo()
         {
-            var test = User;
             var userId = User.FindFirst("sub")?.Value;
             if (userId == null)
             {
                 return Unauthorized();
             }
 
-            // Retrieve user information from the database using the userId
-            // For example, you can use a UserService to get the user details
             var userInfo = await _userService.GetUserByIdAsync(userId);
             return Ok(new GlobalJsonResponse<UserProfileDTO>(
                 message: "User information retrieved successfully", 
@@ -39,6 +36,4 @@ namespace WebApiProject.Controller
             ));
         }
     }
-
-
 }

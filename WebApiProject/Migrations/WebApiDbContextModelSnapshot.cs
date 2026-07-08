@@ -213,9 +213,6 @@ namespace WebApiProject.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("phone_number")
-                        .HasColumnType("longtext");
-
                     b.Property<string>("slug")
                         .IsRequired()
                         .HasColumnType("longtext");

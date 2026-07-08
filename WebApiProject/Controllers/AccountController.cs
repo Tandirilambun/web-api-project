@@ -50,10 +50,10 @@ namespace WebApiProject.Controller
         [HttpPost("login-user")]
         public async Task<IActionResult> Login([FromBody] LoginData data)
         {
-            var user = await _userServices.LoginAsync(data);
-            var roles = await _roleServices.GetUserRoles(user);
+            User user = await _userServices.LoginAsync(data);
+            List<string> roles = await _roleServices.GetUserRoles(user);
 
-            var token = _tokenServices.GenerateAccessToken(user, roles);
+            string token = _tokenServices.GenerateAccessToken(user, roles);
 
             return Ok(new
             {
@@ -66,7 +66,7 @@ namespace WebApiProject.Controller
                     username = user.UserName,
                     email = user.Email,
                     name = user.name,
-                    phone_number = user.phone_number,
+                    phone_number = user.PhoneNumber,
                     slug = user.slug,
                     roles = roles
                 }

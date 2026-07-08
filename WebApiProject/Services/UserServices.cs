@@ -24,12 +24,12 @@ namespace WebApiProject.Services
 
             string slug_name = StringHelper.ConvertToSlug(model.name);
 
-            var user = new User
+            User user = new User
             {
                 UserName = model.username,
                 Email = model.email,
                 name = model.name,
-                phone_number = model.phone_number,
+                PhoneNumber = model.phone_number,
                 slug = slug_name
             };
 
@@ -72,7 +72,7 @@ namespace WebApiProject.Services
                 throw new NotFoundExceptions("User not found");
             }
 
-            var userProfile = new UserProfileDTO
+            UserProfileDTO userProfile = new UserProfileDTO
             {
                 id = user.Id,
                 username = user.UserName,
@@ -82,7 +82,7 @@ namespace WebApiProject.Services
                 emailConfirmed = user.EmailConfirmed,
                 pohneNumberConfirmed = user.PhoneNumberConfirmed,
                 email = user.Email,
-                phone_number = user.phone_number
+                phone_number = user.PhoneNumber
             };
 
             return userProfile;
