@@ -1,5 +1,8 @@
+using System.Text.Json;
+using System.Transactions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using WebApiProject.Data;
 using WebApiProject.Exceptions;
 using WebApiProject.Helper;
 using WebApiProject.Interfaces;
@@ -11,11 +14,13 @@ namespace WebApiProject.Services
     {
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
+        private readonly WebApiDbContext _db;
 
-        public UserServices(UserManager<User> userManager, SignInManager<User> signInManager)
+        public UserServices(UserManager<User> userManager, SignInManager<User> signInManager, WebApiDbContext db)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _db = db;
         }
 
         public async Task<User> RegisterAsync(RegisterData model)
@@ -88,6 +93,89 @@ namespace WebApiProject.Services
             return userProfile;
         }
 
+        public async Task<UserProfileDTO> UpdateUserAsync(string id, Dictionary<string, JsonElement> updatedFields)
+        {
+            User? user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                throw new NotFoundExceptions("User not found");
+            }
+
+            var transaction = await _db.Database.BeginTransactionAsync();
+            using (transaction)
+            {
+                try
+                {
+                    foreach (var field in updatedFields)
+                    {
+                        switch (field.Key.ToLower())
+                        {
+                            case "username":
+                                string? new_username = field.Value.GetString();
+                                if (!string.IsNullOrWhiteSpace(new_username))
+                                {
+                                    var setResultUsername = await _userManager.SetUserNameAsync(user, new_username);
+                                    if (!setResultUsername.Succeeded)
+                                        throw new ValidationExceptions(string.Join(", ", setResultUsername.Errors.Select(e => e.Description)));
+                                }
+                                break;
+
+                            case "name":
+                                user.name = field.Value.GetString() ?? user.name;
+                                user.slug = StringHelper.ConvertToSlug(user.name);
+                                break;
+
+                            case "email":
+                                string? new_email = field.Value.GetString();
+                                if (!StringHelper.isValidEmail(new_email ?? ""))
+                                    throw new ValidationExceptions($"Email '{new_email}' is not valid");
+                                var setResultEmail = await _userManager.SetEmailAsync(user, new_email);
+                                if (!setResultEmail.Succeeded)
+                                    throw new ValidationExceptions(string.Join(", ", setResultEmail.Errors.Select(e => e.Description)));
+                                user.EmailConfirmed = false; // Reset email confirmation status
+                                break;
+
+                            case "phone_number":
+                                string? new_phone_number = field.Value.GetString() ?? user.PhoneNumber;
+                                var setResultPhone = await _userManager.SetPhoneNumberAsync(user, new_phone_number);
+                                if (!setResultPhone.Succeeded)
+                                    throw new ValidationExceptions(string.Join(", ", setResultPhone.Errors.Select(e => e.Description)));
+                                user.PhoneNumberConfirmed = false; // Reset phone number confirmation status
+                                break;
+
+                            default:
+                                throw new ValidationExceptions($"Field '{field.Key}' is not valid for update");
+                        }
+                    }
+
+                    var result = await _userManager.UpdateAsync(user);
+                    if (!result.Succeeded)
+                    {
+                        throw new AppExceptions(string.Join(", ", result.Errors.Select(e => e.Description)), 500);
+                    }
+                    await transaction.CommitAsync();
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw new AppExceptions("An error occurred while updating user information", 500);
+                }
+            }
+
+            return new UserProfileDTO
+            {
+                id = user.Id,
+                username = user.UserName,
+                name = user.name,
+                slug = user.slug,
+                twoFactorEnabled = user.TwoFactorEnabled,
+                emailConfirmed = user.EmailConfirmed,
+                pohneNumberConfirmed = user.PhoneNumberConfirmed,
+                email = user.Email,
+                phone_number = user.PhoneNumber
+            };
+        }
+
         #region Validation Methods
 
         private async Task ValidateRegisterData(RegisterData model)
@@ -149,7 +237,7 @@ namespace WebApiProject.Services
                 throw new ValidationExceptions("Password is required");
             }
         }
-        
+
         #endregion
 
     }

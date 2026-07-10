@@ -7,7 +7,7 @@
 [Bb]in/
 [Oo]bj/
 [Ll]og/
-Migrations
+Migrations/
 
 
 *.vscode/
@@ -25,3 +25,5 @@ appsettings.json
 appsettings.Development.json
 appsettings.Production.json
 appsettings.Local.json
+
+Migrations/*
