@@ -103,6 +103,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddMemoryCache();
 builder.Services.AddAuthorization();
 builder.Services.AddApplicationServices(); 
+builder.Services.AddApplicationRepositories();
 builder.Services.AddControllers();
 
 var app = builder.Build();

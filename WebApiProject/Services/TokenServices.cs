@@ -68,5 +68,15 @@ namespace WebApiProject.Services
         {
             return Task.FromResult(_cache.TryGetValue($"blacklist:{jti}", out _));
         }
+    
+        public app_refresh_token GenerateRefreshToken()
+        {
+            return new app_refresh_token
+            {
+                id = Guid.NewGuid(),
+                token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
+                expired_at = DateTime.UtcNow.AddDays(7)
+            };
+        }
     }
 }

@@ -15,11 +15,20 @@ namespace WebApiProject.Services
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
         private readonly WebApiDbContext _db;
+        private ITokenServices _tokenServices;
+        private IRoleServices _roleServices;
+        private ITokenRepository _tokenRepository;
 
-        public UserServices(UserManager<User> userManager, SignInManager<User> signInManager, WebApiDbContext db)
+        public UserServices(UserManager<User> userManager, 
+        SignInManager<User> signInManager, WebApiDbContext db,
+        ITokenServices tokenServices, IRoleServices roleServices,
+        ITokenRepository tokenRepository)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _tokenServices = tokenServices;
+            _roleServices = roleServices;
+            _tokenRepository = tokenRepository;
             _db = db;
         }
 
@@ -54,7 +63,7 @@ namespace WebApiProject.Services
         {
             await ValidateLoginData(model);
 
-            var user = await _userManager.FindByNameAsync(model.username);
+            User? user = await _userManager.FindByNameAsync(model.username);
             if (user == null)
             {
                 throw new ValidationExceptions("Invalid username or password");
@@ -65,6 +74,12 @@ namespace WebApiProject.Services
             {
                 throw new ValidationExceptions("Invalid username or password");
             }
+
+            List<string> roles = await _roleServices.GetUserRoles(user);
+            string access_token = _tokenServices.GenerateAccessToken(user, roles);
+            app_refresh_token refresh_token = _tokenServices.GenerateRefreshToken();
+
+            await AddRefreshToken(refresh_token, user.Id);
 
             return user;
         }
@@ -85,7 +100,7 @@ namespace WebApiProject.Services
                 slug = user.slug,
                 twoFactorEnabled = user.TwoFactorEnabled,
                 emailConfirmed = user.EmailConfirmed,
-                pohneNumberConfirmed = user.PhoneNumberConfirmed,
+                phoneNumberConfirmed = user.PhoneNumberConfirmed,
                 email = user.Email,
                 phone_number = user.PhoneNumber
             };
@@ -170,12 +185,19 @@ namespace WebApiProject.Services
                 slug = user.slug,
                 twoFactorEnabled = user.TwoFactorEnabled,
                 emailConfirmed = user.EmailConfirmed,
-                pohneNumberConfirmed = user.PhoneNumberConfirmed,
+                phoneNumberConfirmed = user.PhoneNumberConfirmed,
                 email = user.Email,
                 phone_number = user.PhoneNumber
             };
         }
 
+        public async Task AddRefreshToken(app_refresh_token refresh_token, string id_user)
+        {
+            refresh_token.user_id = id_user;
+            await _tokenRepository.AddRefreshTokenAsync(refresh_token);
+            await _db.SaveChangesAsync();
+        }
+        
         #region Validation Methods
 
         private async Task ValidateRegisterData(RegisterData model)

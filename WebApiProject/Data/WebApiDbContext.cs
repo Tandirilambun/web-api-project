@@ -14,6 +14,10 @@ public partial class WebApiDbContext : IdentityDbContext<User, IdentityRole, str
     {
     }
 
+    public DbSet<app_api_client> app_api_clients {get;set;}
+    public DbSet<app_refresh_token> app_refresh_tokens {get;set;}
+
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

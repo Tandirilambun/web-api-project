@@ -53,11 +53,12 @@ namespace WebApiProject.Controller
             User user = await _userServices.LoginAsync(data);
             List<string> roles = await _roleServices.GetUserRoles(user);
 
-            string token = _tokenServices.GenerateAccessToken(user, roles);
-
+            string accessToken = _tokenServices.GenerateAccessToken(user, roles);
+            app_refresh_token refreshToken = _tokenServices.GenerateRefreshToken();
+            
             return Ok(new
             {
-                access_token = token,
+                access_token = accessToken,
                 token_type = "Bearer",
                 expires_in = 3600,
                 user = new

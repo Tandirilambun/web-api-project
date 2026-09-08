@@ -262,6 +262,45 @@ namespace WebApiProject.Migrations
                     b.ToTable("app_api_client");
                 });
 
+            modelBuilder.Entity("WebApiProject.Models.app_refresh_token", b =>
+                {
+                    b.Property<Guid>("id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("created_at")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("expired_at")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("replaced_by_token")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("revoked")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("revoked_at")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("token")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("userId")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("user_id")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("id");
+
+                    b.HasIndex("userId");
+
+                    b.ToTable("app_refresh_token");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -311,6 +350,20 @@ namespace WebApiProject.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("WebApiProject.Models.app_refresh_token", b =>
+                {
+                    b.HasOne("WebApiProject.Models.User", "user")
+                        .WithMany("refresh_tokens")
+                        .HasForeignKey("userId");
+
+                    b.Navigation("user");
+                });
+
+            modelBuilder.Entity("WebApiProject.Models.User", b =>
+                {
+                    b.Navigation("refresh_tokens");
                 });
 #pragma warning restore 612, 618
         }
