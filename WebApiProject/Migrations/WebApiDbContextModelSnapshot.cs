@@ -259,7 +259,7 @@ namespace WebApiProject.Migrations
 
                     b.HasKey("client_id");
 
-                    b.ToTable("app_api_client");
+                    b.ToTable("app_api_clients");
                 });
 
             modelBuilder.Entity("WebApiProject.Models.app_refresh_token", b =>
@@ -298,7 +298,7 @@ namespace WebApiProject.Migrations
 
                     b.HasIndex("userId");
 
-                    b.ToTable("app_refresh_token");
+                    b.ToTable("app_refresh_tokens");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

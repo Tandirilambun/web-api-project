@@ -13,105 +13,40 @@ namespace WebApiProject.Controller
     public class AccountController : ControllerBase
     {
         private readonly IUserServices _userServices;
-        private readonly IRoleServices _roleServices;
-        private readonly ITokenServices _tokenServices;
 
-        public AccountController(IUserServices userServices, IRoleServices roleServices, ITokenServices tokenServices)
+        public AccountController(IUserServices userServices)
         {
             _userServices = userServices;
-            _roleServices = roleServices;
-            _tokenServices = tokenServices;
         }
 
         [AllowAnonymous]
         [HttpPost("register-user")]
         public async Task<IActionResult> Register([FromBody] RegisterData model)
         {
-            var user = await _userServices.RegisterAsync(model);
-            var role = await _roleServices.SignUserToRole(user, model.role);
-
-            return Ok(new
-            {
-                message = "User registered successfully.",
-                user = new UserResponseDTO
-                {
-                    id = user.Id,
-                    username = user.UserName,
-                    name = user.name,
-                    slug = user.slug,
-                    twoFactorEnabled = user.TwoFactorEnabled,
-                    emailConfirmed = user.EmailConfirmed,
-                    pohneNumberConfirmed = user.PhoneNumberConfirmed
-                }
-            });
+            UserResponseDTO user = await _userServices.RegisterAsync(model);
+            return Ok(new GlobalJsonResponse<UserResponseDTO>(
+                message: "User registered successfully.",
+                data: user
+            ));
         }
 
         [AllowAnonymous]
         [HttpPost("login-user")]
         public async Task<IActionResult> Login([FromBody] LoginData data)
         {
-            User user = await _userServices.LoginAsync(data);
-            List<string> roles = await _roleServices.GetUserRoles(user);
-
-            string accessToken = _tokenServices.GenerateAccessToken(user, roles);
-            app_refresh_token refreshToken = _tokenServices.GenerateRefreshToken();
-            
-            return Ok(new
-            {
-                access_token = accessToken,
-                token_type = "Bearer",
-                expires_in = 3600,
-                user = new
-                {
-                    id = user.Id,
-                    username = user.UserName,
-                    email = user.Email,
-                    name = user.name,
-                    phone_number = user.PhoneNumber,
-                    slug = user.slug,
-                    roles = roles
-                }
-            });
+            LoginResponseDTO login_response = await _userServices.LoginAsync(data);
+            return Ok(new GlobalJsonResponse<LoginResponseDTO>(
+                message: "User logged in successfully.",
+                data: login_response
+            ));
         }
 
         [Authorize]
         [HttpPost("logout-user")]
         public async Task<IActionResult> Logout()
         {
-            var jti = User.FindFirstValue(JwtRegisteredClaimNames.Jti);
-            var expiryClaim = User.FindFirstValue(JwtRegisteredClaimNames.Exp);
-            if(jti == null || expiryClaim == null)
-            {
-                return BadRequest(new { message = "Invalid token." });
-            }
-
-            var expiry = DateTimeOffset.FromUnixTimeSeconds(long.Parse(expiryClaim)).UtcDateTime;
-            await _tokenServices.RevokeTokenAsync(jti, expiry);
-
+            await _userServices.LogoutAsync();
             return NoContent();
-        }
-
-        [AllowAnonymous]
-        [HttpPost("generate-all-role")]
-        public async Task<IActionResult> GenerateAllRoles()
-        {
-            try
-            {
-                List<IdentityRole> role_result = await _roleServices.GenerateAllRoles();
-                return Ok(new { message = "Roles created successfully.", data = role_result });
-            }
-            catch (System.Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
-        [AllowAnonymous]
-        [HttpPost("jwt-key")]
-        public async Task<IActionResult> GenerateJWTKey()
-        {
-            string jwt_key = _tokenServices.JwtKeyGenerate();
-            return Ok(new { message = "Jwt Key berhasil di generate", key = jwt_key });
         }
     }
 }

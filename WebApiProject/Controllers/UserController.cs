@@ -13,9 +13,7 @@ namespace WebApiProject.Controller
     [Route("api/[controller]")]
     public class UserController : ControllerBase
     {
-
         private IUserServices _userService;
-
         public UserController(IUserServices userService)
         {
             _userService = userService;
@@ -24,12 +22,7 @@ namespace WebApiProject.Controller
         [HttpGet("user-info")]
         public async Task<IActionResult> GetUserInfo()
         {
-            var userId = User.FindFirst("sub")?.Value;
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
+            var userId = await _userService.IsUserAuthorized();
             var userInfo = await _userService.GetUserByIdAsync(userId);
             return Ok(new GlobalJsonResponse<UserProfileDTO>(
                 message: "User information retrieved successfully", 
@@ -40,12 +33,7 @@ namespace WebApiProject.Controller
         [HttpPatch("update-user-info")]
         public async Task<IActionResult> UpdateUserInfo([FromBody] Dictionary<string, JsonElement> updatedFields)
         {
-            string userId = User.FindFirst("sub")?.Value;
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
+            var userId = await _userService.IsUserAuthorized();
             UserProfileDTO updatedUserInfo = await _userService.UpdateUserAsync(userId, updatedFields);
 
             return Ok(new GlobalJsonResponse<UserProfileDTO>(
