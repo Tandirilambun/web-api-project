@@ -9,8 +9,10 @@ namespace WebApiProject.Interfaces
         string JwtKeyGenerate();
         Task RevokeTokenAsync(string jti, DateTime expiry);
         Task<bool> IsTokenRevokedAsync(string jti);
-        app_refresh_token GenerateRefreshToken();
+        RefreshTokenResult GenerateRefreshToken();
         // string GetRefreshToken();
         // Task<bool> ValidateTokenAsync(string token);
+        Task<AuthResponse> RefreshNewToken(string rawRefreshTokenFromCookie);
+        Task RevokeRefreshTokenAsync(string rawToken);
     }
 }

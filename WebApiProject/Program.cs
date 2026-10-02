@@ -57,14 +57,15 @@ builder.Services.ConfigureApplicationCookie(options =>
 //JWT Authentication Configuration
 
 // Clear default claims mapping
-JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear(); 
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = "JwtBearer";
         options.DefaultChallengeScheme = "JwtBearer";
     })
-    .AddJwtBearer("JwtBearer", options => {
+    .AddJwtBearer("JwtBearer", options =>
+    {
         options.MapInboundClaims = false; // Prevents automatic mapping of claims
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -85,31 +86,46 @@ builder.Services.AddAuthentication(options =>
             OnTokenValidated = async context =>
             {
                 var jti = context.Principal?.FindFirst(JwtRegisteredClaimNames.Jti);
-                if(jti == null)
+                if (jti == null)
                 {
                     context.Fail("Token tidak valid");
                     return;
                 }
 
                 var blacklist = context.HttpContext.RequestServices.GetRequiredService<ITokenServices>();
-                if(await blacklist.IsTokenRevokedAsync(jti.Value))
+                if (await blacklist.IsTokenRevokedAsync(jti.Value))
                 {
                     context.Fail("Token telah dicabut");
                 }
             }
         };
+    });
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AppCorsPolicy", policy =>
+    {
+        policy.WithOrigins("https://yourfrontend.com", "http://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
 });
+
+builder.Services.Configure<RefreshTokenSettings>(
+    builder.Configuration.GetSection("RefreshTokenSettings"));
+
 
 builder.Services.AddMemoryCache();
 builder.Services.AddAuthorization();
-builder.Services.AddApplicationServices(); 
+builder.Services.AddApplicationServices();
 builder.Services.AddApplicationRepositories();
 builder.Services.AddControllers();
 
 var app = builder.Build();
 
 //Exception Handling
-app.UseExceptionHandler( errorApp =>
+app.UseExceptionHandler(errorApp =>
     errorApp.Run(async context =>
     {
         var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
@@ -124,6 +140,7 @@ app.UseExceptionHandler( errorApp =>
         await context.Response.WriteAsJsonAsync(new { message = message });
     })
 );
+app.UseCors("AppCorsPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();

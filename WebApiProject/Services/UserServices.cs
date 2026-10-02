@@ -49,7 +49,6 @@ namespace WebApiProject.Services
                 UserName = model.username,
                 Email = model.email,
                 name = model.name,
-                PhoneNumber = model.phone_number,
                 slug = slug_name
             };
 
@@ -66,7 +65,7 @@ namespace WebApiProject.Services
                     slug = user.slug,
                     twoFactorEnabled = user.TwoFactorEnabled,
                     emailConfirmed = user.EmailConfirmed,
-                    pohneNumberConfirmed = user.PhoneNumberConfirmed
+                    phoneNumberConfirmed = user.PhoneNumberConfirmed
                 };
             }
             else
@@ -75,7 +74,7 @@ namespace WebApiProject.Services
             }
         }
 
-        public async Task<LoginResponseDTO> LoginAsync(LoginData model)
+        public async Task<LoginResponse> LoginAsync(LoginData model)
         {
             await ValidateLoginData(model);
 
@@ -88,9 +87,9 @@ namespace WebApiProject.Services
             List<string> roles = await _roleServices.GetUserRoles(user);
             string access_token = _tokenServices.GenerateAccessToken(user, roles);
 
-            app_refresh_token refresh_token = _tokenServices.GenerateRefreshToken();
+            RefreshTokenResult refresh_token = _tokenServices.GenerateRefreshToken();
 
-            await AddRefreshToken(refresh_token, user.Id);
+            await AddRefreshToken(refresh_token.Entity, user);
 
             LoginResponseDTO.user_data user_data = new LoginResponseDTO.user_data
             {
@@ -103,17 +102,22 @@ namespace WebApiProject.Services
                 roles = roles
             };
 
-            return new LoginResponseDTO()
+            LoginResponseDTO res = new LoginResponseDTO()
             {
                 access_token = access_token,
                 token_type = "Bearer",
                 expires_in = 3600,
-                refresh_token = refresh_token.token,
                 user = user_data
+            };
+
+            return new LoginResponse()
+            {
+                response = res,
+                refresh_token = refresh_token.RawToken
             };
         }
 
-        public async Task LogoutAsync()
+        public async Task LogoutAsync(string? rawRefreshToken)
         {
             var jti = User.FindFirstValue(JwtRegisteredClaimNames.Jti);
             var expiryClaim = User.FindFirstValue(JwtRegisteredClaimNames.Exp);
@@ -123,6 +127,11 @@ namespace WebApiProject.Services
             }
             var expiry = DateTimeOffset.FromUnixTimeSeconds(long.Parse(expiryClaim)).UtcDateTime;
             await _tokenServices.RevokeTokenAsync(jti, expiry);
+            // revoke refresh token di DB juga, bukan cuma access token
+            if (!string.IsNullOrWhiteSpace(rawRefreshToken))
+            {
+                await _tokenServices.RevokeRefreshTokenAsync(rawRefreshToken);
+            }
         }
 
         public async Task<UserProfileDTO> GetUserByIdAsync(string id)
@@ -232,9 +241,10 @@ namespace WebApiProject.Services
             };
         }
 
-        public async Task AddRefreshToken(app_refresh_token refresh_token, string id_user)
+        public async Task AddRefreshToken(app_refresh_token refresh_token, User user)
         {
-            refresh_token.user_id = id_user;
+            refresh_token.user_id = user.Id;
+            refresh_token.user = user;
             refresh_token.created_at = DateTime.Now;
             await _tokenRepository.AddRefreshTokenAsync(refresh_token);
             await _db.SaveChangesAsync();
@@ -245,7 +255,7 @@ namespace WebApiProject.Services
             var userId = User?.FindFirst("sub")?.Value;
             if (userId == null)
                 throw new AppExceptions("Unauthorized", 401);
-            
+
             return userId;
         }
 
@@ -279,10 +289,10 @@ namespace WebApiProject.Services
                 throw new ValidationExceptions($"Email '{model.email}' is not valid");
             }
 
-            if (string.Compare(model.password, model.confirmPassword) != 0)
-            {
-                throw new ValidationExceptions("Password and Confirm Password do not match");
-            }
+            // if (string.Compare(model.password, model.confirmPassword) != 0)
+            // {
+            //     throw new ValidationExceptions("Password and Confirm Password do not match");
+            // }
 
             User? username_exist = await _userManager.FindByNameAsync(model.username);
             User? email_exist = await _userManager.FindByEmailAsync(model.email);
