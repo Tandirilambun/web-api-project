@@ -23,6 +23,27 @@ namespace WebApiProject.Controller
         }
 
         [AllowAnonymous]
+        [HttpGet("login")]
+        public async Task<IActionResult> Login()
+        {
+            return Ok();
+        }
+
+        [HttpGet("me")]
+        public async Task<IActionResult> Me()
+        {
+            var userId = User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new GlobalJsonResponse<object>(message: "Unauthorized", data: null));
+
+            var user = await _userServices.GetUserByIdAsync(userId);
+            return Ok(new GlobalJsonResponse<UserProfileDTO>(
+                message: "User profile retrieved successfully.",
+                data: user
+            ));
+        }
+
+        [AllowAnonymous]
         [HttpPost("register-user")]
         public async Task<IActionResult> Register([FromBody] RegisterData model)
         {
@@ -51,6 +72,13 @@ namespace WebApiProject.Controller
             ));
         }
 
+        [HttpPost("test-endpoint")]
+        public async Task<IActionResult> TestEndpoint()
+        {
+            var userId = User;
+            return Ok(new { message = "Test endpoint accessed successfully.", userId });
+        }
+
         [Authorize]
         [HttpPost("logout-user")]
         public async Task<IActionResult> Logout()
@@ -70,6 +98,8 @@ namespace WebApiProject.Controller
         [HttpPost("refresh")]
         public async Task<IActionResult> Refresh()
         {
+            var test = User.FindFirst("sub")?.Value;
+            var test2 = User;
             if (!Request.Cookies.TryGetValue("refresh_token", out var rawToken))
                 return Unauthorized(new { message = "No refresh token provided" });
             try
@@ -92,5 +122,6 @@ namespace WebApiProject.Controller
                 return Unauthorized(new { message = ex.Message });
             }
         }
+
     }
 }

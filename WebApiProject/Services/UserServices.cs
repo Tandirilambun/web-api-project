@@ -49,14 +49,16 @@ namespace WebApiProject.Services
                 UserName = model.username,
                 Email = model.email,
                 name = model.name,
-                slug = slug_name
+                slug = slug_name,
+                created_at = DateTime.Now,
+                updated_at = DateTime.Now
             };
 
             var result = await _userManager.CreateAsync(user, model.password);
-            var role = await _roleServices.SignUserToRole(user, model.role);
 
-            if (result.Succeeded || role)
+            if (result.Succeeded)
             {
+                var role = await _roleServices.SignUserToRole(user, model.role);
                 return new UserResponseDTO
                 {
                     id = user.Id,
@@ -70,7 +72,11 @@ namespace WebApiProject.Services
             }
             else
             {
-                throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
+                throw new AppExceptions(
+                    message: "Failed to create user.", 
+                    statusCode: 500, 
+                    errors: result.Errors.Select(e => e.Description).ToList()
+                );
             }
         }
 
@@ -89,7 +95,7 @@ namespace WebApiProject.Services
 
             RefreshTokenResult refresh_token = _tokenServices.GenerateRefreshToken();
 
-            await AddRefreshToken(refresh_token.Entity, user);
+            await _tokenServices.AddRefreshToken(refresh_token.Entity, user);
 
             LoginResponseDTO.user_data user_data = new LoginResponseDTO.user_data
             {
@@ -241,15 +247,6 @@ namespace WebApiProject.Services
             };
         }
 
-        public async Task AddRefreshToken(app_refresh_token refresh_token, User user)
-        {
-            refresh_token.user_id = user.Id;
-            refresh_token.user = user;
-            refresh_token.created_at = DateTime.Now;
-            await _tokenRepository.AddRefreshTokenAsync(refresh_token);
-            await _db.SaveChangesAsync();
-        }
-
         public async Task<string> IsUserAuthorized()
         {
             var userId = User?.FindFirst("sub")?.Value;
@@ -259,6 +256,8 @@ namespace WebApiProject.Services
             return userId;
         }
 
+        
+        
         #region Validation Methods
 
         private async Task ValidateRegisterData(RegisterData model)
@@ -281,6 +280,11 @@ namespace WebApiProject.Services
             if (string.IsNullOrWhiteSpace(model.name))
             {
                 throw new ValidationExceptions("Name is required");
+            }
+
+            if (model.termsncondition == false)
+            {
+                throw new ValidationExceptions("You need to agreeing with our Terms and Conditon");
             }
 
             bool valid_email = StringHelper.isValidEmail(model.email);

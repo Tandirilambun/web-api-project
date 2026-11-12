@@ -7,7 +7,7 @@ namespace WebApiProject.Models
         public string password { get; set; }
         public string name { get; set; }
         public string role { get; set; }
-        public bool termsnconditon { get; set; }
+        public bool termsncondition { get; set; }
     }
 
     public class LoginData

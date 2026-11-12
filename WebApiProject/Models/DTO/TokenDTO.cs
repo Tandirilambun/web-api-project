@@ -5,7 +5,8 @@ namespace WebApiProject.Models
     public record AuthResponse(
         string AccessToken,
         string RefreshToken,
-        int ExpiresIn
+        int ExpiresIn,
+        UserResponseDTO? User = null
     );
 
     public class RefreshTokenResult

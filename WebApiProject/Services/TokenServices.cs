@@ -136,19 +136,34 @@ namespace WebApiProject.Services
             RefreshTokenResult newRefreshToken = GenerateRefreshToken();
 
             newRefreshToken.Entity.user_id = user.Id;
+            newRefreshToken.Entity.created_at = DateTime.UtcNow;
             newRefreshToken.Entity.expired_at = DateTime.UtcNow.AddDays(7);
 
-            await _tokenRepository.AddRefreshTokenAsync(newRefreshToken.Entity);
-            await _tokenRepository.SaveAsync(); // supaya newRefreshToken.id ke-generate sebelum dipakai di bawah
+            await AddRefreshToken(newRefreshToken.Entity, user);
 
             storedToken.revoked_at = DateTime.UtcNow;
             storedToken.replaced_by_token = newRefreshToken.Entity.token;
+            storedToken.revoked = true;
+            
             await _tokenRepository.SaveAsync();
 
             return new AuthResponse(
                 AccessToken: newAccessToken,
                 RefreshToken: newRefreshToken.RawToken,
-                ExpiresIn: 3600
+                ExpiresIn: 3600,
+                User: new UserResponseDTO
+                {
+                    id = user.Id,
+                    username = user.UserName,
+                    name = user.name,
+                    slug = user.slug,
+                    twoFactorEnabled = user.TwoFactorEnabled,
+                    emailConfirmed = user.EmailConfirmed,
+                    phoneNumberConfirmed = user.PhoneNumberConfirmed,
+                    email = user.Email,
+                    phone_number = user.PhoneNumber,
+                    roles = roles
+                }
             );
         }
 
@@ -168,6 +183,15 @@ namespace WebApiProject.Services
                 storedToken.revoked_at = DateTime.UtcNow;
                 await _tokenRepository.SaveAsync();
             }
+        }
+
+        public async Task AddRefreshToken(app_refresh_token refresh_token, User user)
+        {
+            refresh_token.user_id = user.Id;
+            refresh_token.user = user;
+            refresh_token.created_at = DateTime.Now;
+            await _tokenRepository.AddRefreshTokenAsync(refresh_token);
+            await _tokenRepository.SaveAsync();
         }
     }
 }

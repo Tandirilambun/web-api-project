@@ -14,5 +14,6 @@ namespace WebApiProject.Interfaces
         // Task<bool> ValidateTokenAsync(string token);
         Task<AuthResponse> RefreshNewToken(string rawRefreshTokenFromCookie);
         Task RevokeRefreshTokenAsync(string rawToken);
+        Task AddRefreshToken(app_refresh_token refresh_token, User user);
     }
 }

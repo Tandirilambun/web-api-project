@@ -130,14 +130,14 @@ app.UseExceptionHandler(errorApp =>
     {
         var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
 
-        var (status, message) = exception switch
+        var (status, message, errors) = exception switch
         {
-            AppExceptions ex => (ex.StatusCode, ex.Message),
-            _ => (500, "Internal Server Error")
+            AppExceptions ex => (ex.StatusCode, ex.Message, ex.Errors),
+            _ => (500, "Internal Server Error", new List<string>())
         };
 
         context.Response.StatusCode = status;
-        await context.Response.WriteAsJsonAsync(new { message = message });
+        await context.Response.WriteAsJsonAsync(new { message = message, errors = errors });
     })
 );
 app.UseCors("AppCorsPolicy");
