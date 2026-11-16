@@ -118,7 +118,7 @@ builder.Services.Configure<RefreshTokenSettings>(
 
 builder.Services.AddMemoryCache();
 builder.Services.AddAuthorization();
-builder.Services.AddApplicationServices();
+builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddApplicationRepositories();
 builder.Services.AddControllers();
 

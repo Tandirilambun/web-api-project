@@ -4,3 +4,25 @@ GET {{WebApiProject_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+# Cari produk marketplace (hasil di-cache)
+GET {{WebApiProject_HostAddress}}/api/product/search?q=iphone%2017&page=1&limit=10
+Accept: application/json
+
+###
+
+# Tanpa filter kategori (kembali ke hasil relevansi mentah marketplace)
+GET {{WebApiProject_HostAddress}}/api/product/search?q=iphone%2017&page=1&limit=10&category=0
+Accept: application/json
+
+###
+
+# Paksa ambil ulang dari marketplace (melewati cache)
+GET {{WebApiProject_HostAddress}}/api/product/search?q=iphone%2015&page=1&limit=10&refresh=true
+Accept: application/json
+
+###
+
+# Daftar marketplace yang didukung
+GET {{WebApiProject_HostAddress}}/api/product/marketplaces
+Accept: application/json
